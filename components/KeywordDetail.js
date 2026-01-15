@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import "chart.js/auto";
 import { formatNumber } from "@/utils/format";
 
@@ -21,42 +21,56 @@ import { formatNumber } from "@/utils/format";
  *       }
  *     ]
  *   }
- * - googleTrend: optional
  */
-export default function KeywordDetail({ keyword, naverData, googleTrend }) {
+export default function KeywordDetail({ keyword, naverData }) {
   if (!keyword) return null;
 
   const keywords = Array.isArray(naverData?.keywords)
     ? naverData.keywords
     : [];
 
-  const main = keywords[0]; // 기준 키워드 (첫 번째)
+  const main = keywords[0];
 
-  // ===== 차트 데이터 (숫자만 사용, 절대 toLocaleString ❌) =====
+  // 데이터 없을 때 안전 처리
+  if (!main) {
+    return (
+      <section className="mt-8 bg-white rounded-xl shadow p-6">
+        <p className="text-gray-400">해당 키워드의 데이터가 없습니다.</p>
+      </section>
+    );
+  }
+
+  /* ===========================
+     차트 데이터 (숫자만 사용)
+  =========================== */
+
   const volumeChartData = {
     labels: ["PC", "Mobile"],
     datasets: [
       {
         label: "검색량",
         data: [
-          Number(main?.pcVolume || 0),
-          Number(main?.mobileVolume || 0),
+          Number(main.pcVolume ?? 0),
+          Number(main.mobileVolume ?? 0),
         ],
+        backgroundColor: ["#3b82f6", "#60a5fa"],
       },
     ],
   };
+
+  const competitionValue =
+    main.competition === "HIGH"
+      ? 3
+      : main.competition === "MID"
+      ? 2
+      : 1;
 
   const competitionData = {
     labels: ["경쟁도"],
     datasets: [
       {
-        data: [
-          main?.competition === "HIGH"
-            ? 3
-            : main?.competition === "MID"
-            ? 2
-            : 1,
-        ],
+        data: [competitionValue],
+        backgroundColor: ["#f97316"],
       },
     ],
   };
@@ -66,7 +80,8 @@ export default function KeywordDetail({ keyword, naverData, googleTrend }) {
       {/* ===== 헤더 ===== */}
       <div className="bg-white rounded-xl shadow p-6">
         <h2 className="text-2xl font-bold mb-2">
-          🔍 키워드 분석: <span className="text-blue-600">{keyword}</span>
+          🔍 키워드 분석:{" "}
+          <span className="text-blue-600">{keyword}</span>
         </h2>
         <p className="text-gray-500 text-sm">
           네이버 검색광고 실데이터 기반 분석
@@ -77,19 +92,19 @@ export default function KeywordDetail({ keyword, naverData, googleTrend }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SummaryCard
           title="총 검색량"
-          value={formatNumber(main?.totalVolume)}
+          value={formatNumber(main.totalVolume)}
         />
         <SummaryCard
           title="PC 검색량"
-          value={formatNumber(main?.pcVolume)}
+          value={formatNumber(main.pcVolume)}
         />
         <SummaryCard
           title="모바일 검색량"
-          value={formatNumber(main?.mobileVolume)}
+          value={formatNumber(main.mobileVolume)}
         />
         <SummaryCard
           title="평균 CPC"
-          value={`${formatNumber(main?.bid)} 원`}
+          value={`${formatNumber(main.bid)} 원`}
         />
       </div>
 
@@ -102,7 +117,7 @@ export default function KeywordDetail({ keyword, naverData, googleTrend }) {
         <ChartCard title="경쟁도 지표">
           <Doughnut data={competitionData} />
           <p className="text-center mt-2 font-semibold">
-            {main?.competition || "N/A"}
+            {main.competition || "N/A"}
           </p>
         </ChartCard>
       </div>
@@ -110,10 +125,6 @@ export default function KeywordDetail({ keyword, naverData, googleTrend }) {
       {/* ===== 연관 키워드 ===== */}
       <div className="bg-white rounded-xl shadow p-6">
         <h3 className="text-lg font-semibold mb-4">연관 키워드</h3>
-
-        {keywords.length === 0 && (
-          <p className="text-gray-400">연관 키워드가 없습니다.</p>
-        )}
 
         <ul className="divide-y">
           {keywords.slice(0, 10).map((k) => (
